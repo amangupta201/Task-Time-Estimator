@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, validator
 import numpy as np
@@ -8,11 +7,9 @@ import pickle
 import json
 from typing import List, Optional
 import os
-from pathlib import Path
 
 # Import your neural network classes
 from main import NeuralNetwork, TaskTimeDataGenerator
-
 # Initialize FastAPI app
 app = FastAPI(
     title="Neural Network Task Time Estimator API",
