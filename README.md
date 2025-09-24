@@ -2,7 +2,7 @@
 
 **A neural network built from scratch using pure NumPy - No TensorFlow, No PyTorch**
 
-## [🔴 LIVE DEMO](https://task-time-estimator-7i1m.onrender.co)
+## [🔴 LIVE DEMO](https://task-time-estimator-7i1m.onrender.com/)
 
 A full-stack web application that predicts task completion times using a neural network implemented entirely from mathematical fundamentals. This project demonstrates deep understanding of neural network internals, backpropagation, and gradient descent without relying on high-level ML libraries.
 
