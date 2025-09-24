@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Network Task Time Estimator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin: 10px 5px;
+        }
+
+        .status-online {
+            background: #48bb78;
+            color: white;
+        }
+
+        .status-offline {
+            background: #f56565;
+            color: white;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #4a5568;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .predict-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .predict-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .predict-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .result-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-time {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .result-details {
+            color: #718096;
+            font-size: 0.9em;
+        }
+
+        .confidence-range {
+            background: #e2e8f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+
+        .network-viz {
+            text-align: center;
+        }
+
+        .model-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .architecture {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .layer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .layer-name {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9em;
+        }
+
+        .nodes {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .node {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .node.active {
+            background: #48bb78;
+            box-shadow: 0 0 10px rgba(72, 187, 120, 0.5);
+        }
+
+        .arrow {
+            font-size: 20px;
+            color: #a0aec0;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #f56565;
+        }
+
+        .tech-stack {
+            background: #2d3748;
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .tech-stack h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .tech-item {
+            display: inline-block;
+            background: #4a5568;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .api-status {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .architecture {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .model-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Neural Network Task Time Estimator</h1>
+            <p>Built from scratch with pure NumPy and mathematics - No TensorFlow, No PyTorch</p>
+            <div class="api-status">
+                <span id="apiStatus" class="status-badge status-offline">🔴 Checking API...</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card">
+                <h2>🎯 Predict Task Duration</h2>
+
+                <div class="form-group">
+                    <label for="taskCategory">Task Category:</label>
+                    <select id="taskCategory">
+                        <option value="0">💻 Coding</option>
+                        <option value="1">📝 Writing</option>
+                        <option value="2">🔍 Research</option>
+                        <option value="3">👥 Meeting</option>
+                        <option value="4">📋 Admin</option>
+                        <option value="5">🎨 Creative</option>
+                        <option value="6">🐛 Debugging</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="complexity">Complexity Level (1-10):</label>
+                    <input type="range" id="complexity" min="1" max="10" value="5">
+                    <span id="complexityValue">5</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="descriptionLength">Description Length (words):</label>
+                    <input type="range" id="descriptionLength" min="5" max="100" value="50">
+                    <span id="descLengthValue">50</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="hourOfDay">Hour of Day:</label>
+                    <select id="hourOfDay">
+                        <option value="8">8 AM</option>
+                        <option value="9">9 AM</option>
+                        <option value="10" selected>10 AM</option>
+                        <option value="11">11 AM</option>
+                        <option value="12">12 PM</option>
+                        <option value="13">1 PM</option>
+                        <option value="14">2 PM</option>
+                        <option value="15">3 PM</option>
+                        <option value="16">4 PM</option>
+                        <option value="17">5 PM</option>
+                        <option value="18">6 PM</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="energyLevel">Energy Level (1-10):</label>
+                    <input type="range" id="energyLevel" min="1" max="10" value="7">
+                    <span id="energyValue">7</span>
+                </div>
+
+                <button class="predict-btn" onclick="predictTaskTime()">
+                    <span id="btnText">🔮 Predict Time</span>
+                    <div class="loading" id="loading"></div>
+                </button>
+
+                <div id="error" class="error-message" style="display: none;"></div>
+
+                <div id="result" class="result-container" style="display: none;">
+                    <div class="result-time" id="predictedTime">45.2 minutes</div>
+                    <div class="result-details" id="resultDetails">
+                        Based on neural network analysis of task patterns
+                    </div>
+                    <div class="confidence-range" id="confidenceRange">
+                        Confidence range: 35.2 - 55.2 minutes
+                    </div>
+                </div>
+            </div>
+
+            <div class="card network-viz">
+                <h2>🏗️ Live Model Stats</h2>
+
+                <div class="model-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalParams">~1,700</div>
+                        <div class="stat-label">Parameters</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="modelAccuracy">~28 min</div>
+                        <div class="stat-label">Avg Error</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="modelMape">~67%</div>
+                        <div class="stat-label">MAPE</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">1000</div>
+                        <div class="stat-label">Training Epochs</div>
+                    </div>
+                </div>
+
+                <div class="architecture">
+                    <div class="layer">
+                        <div class="layer-name">Input</div>
+                        <div class="nodes">
+                            <div class="node" id="input1"></div>
+                            <div class="node" id="input2"></div>
+                            <div class="node" id="input3"></div>
+                            <div class="node" id="input4"></div>
+                            <div class="node" id="input5"></div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">→</div>
+
+                    <div class="layer">
+                        <div class="layer-name">Hidden 1</div>
+                        <div class="nodes">
+                            <div class="node"></div>
+                            <div class="node"></div>
+                            <div class="node"></div>
+                            <div class="node"></div>
+                            <div class="node"></div>
+                            <div style="color: #a0aec0; font-size: 12px;">32 nodes</div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">→</div>
+
+                    <div class="layer">
+                        <div class="layer-name">Hidden 2</div>
+                        <div class="nodes">
+                            <div class="node"></div>
+                            <div class="node"></div>
+                            <div class="node"></div>
+                            <div style="color: #a0aec0; font-size: 12px;">16 nodes</div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">→</div>
+
+                    <div class="layer">
+                        <div class="layer-name">Output</div>
+                        <div class="nodes">
+                            <div class="node" id="output"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tech-stack">
+            <h3>🛠️ Real Neural Network Backend</h3>
+            <span class="tech-item">FastAPI</span>
+            <span class="tech-item">Pure NumPy</span>
+            <span class="tech-item">Feedforward Neural Network</span>
+            <span class="tech-item">Backpropagation</span>
+            <span class="tech-item">ReLU Activation</span>
+            <span class="tech-item">Gradient Descent</span>
+            <span class="tech-item">Real Model Predictions</span>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let modelInfo = null;
+
+        // Update slider values
+        document.getElementById('complexity').oninput = function() {
+            document.getElementById('complexityValue').textContent = this.value;
+        };
+
+        document.getElementById('descriptionLength').oninput = function() {
+            document.getElementById('descLengthValue').textContent = this.value;
+        };
+
+        document.getElementById('energyLevel').oninput = function() {
+            document.getElementById('energyValue').textContent = this.value;
+        };
+
+        // Check API status on load
+        async function checkApiStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+
+                if (response.ok && data.status === 'healthy') {
+                    document.getElementById('apiStatus').textContent = '🟢 API Connected';
+                    document.getElementById('apiStatus').className = 'status-badge status-online';
+                    await loadModelInfo();
+                } else {
+                    throw new Error('API unhealthy');
+                }
+            } catch (error) {
+                document.getElementById('apiStatus').textContent = '🔴 API Offline';
+                document.getElementById('apiStatus').className = 'status-badge status-offline';
+                console.error('API Status Error:', error);
+            }
+        }
+
+        // Load model information
+        async function loadModelInfo() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/model/info`);
+                modelInfo = await response.json();
+
+                // Update UI with real model stats
+                document.getElementById('totalParams').textContent = modelInfo.total_parameters.toLocaleString();
+                document.getElementById('modelAccuracy').textContent = `${modelInfo.training_accuracy.validation_mae.toFixed(1)} min`;
+                document.getElementById('modelMape').textContent = `${modelInfo.training_accuracy.validation_mape.toFixed(1)}%`;
+
+            } catch (error) {
+                console.error('Failed to load model info:', error);
+            }
+        }
+
+        async function predictTaskTime() {
+            // Get input values
+            const taskData = {
+                task_category: parseInt(document.getElementById('taskCategory').value),
+                complexity: parseInt(document.getElementById('complexity').value),
+                description_length: parseInt(document.getElementById('descriptionLength').value),
+                hour_of_day: parseInt(document.getElementById('hourOfDay').value),
+                energy_level: parseInt(document.getElementById('energyLevel').value)
+            };
+
+            // Show loading state
+            const btn = document.querySelector('.predict-btn');
+            const btnText = document.getElementById('btnText');
+            const loading = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const resultDiv = document.getElementById('result');
+
+            btn.disabled = true;
+            btnText.style.opacity = '0';
+            loading.style.display = 'block';
+            errorDiv.style.display = 'none';
+            resultDiv.style.display = 'none';
+
+            // Animate network
+            animateNetwork();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/predict`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(taskData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Prediction failed');
+                }
+
+                const result = await response.json();
+
+                // Display results after a short delay for animation
+                setTimeout(() => {
+                    const hours = Math.floor(result.predicted_time / 60);
+                    const minutes = Math.round(result.predicted_time % 60);
+                    let timeStr = '';
+
+                    if (hours > 0) {
+                        timeStr = `${hours}h ${minutes}m`;
+                    } else {
+                        timeStr = `${Math.round(result.predicted_time)} minutes`;
+                    }
+
+                    document.getElementById('predictedTime').textContent = `${result.predicted_time.toFixed(1)} minutes`;
+
+                    document.getElementById('resultDetails').innerHTML =
+                        `Estimated time for <strong>${result.task_category_name}</strong> task<br>` +
+                        `Complexity: ${taskData.complexity}/10 • Energy: ${taskData.energy_level}/10 • Time: ${taskData.hour_of_day}:00<br>` +
+                        `<em>Model MAE: ±${result.model_info.mae.toFixed(1)}min • MAPE: ${result.model_info.mape.toFixed(1)}%</em>`;
+
+                    if (result.confidence_interval) {
+                        document.getElementById('confidenceRange').textContent =
+                            `Confidence range: ${result.confidence_interval[0].toFixed(1)} - ${result.confidence_interval[1].toFixed(1)} minutes`;
+                    }
+
+                    resultDiv.style.display = 'block';
+                }, 1500);
+
+            } catch (error) {
+                setTimeout(() => {
+                    errorDiv.textContent = `Error: ${error.message}`;
+                    errorDiv.style.display = 'block';
+                }, 1000);
+            } finally {
+                // Reset button state
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btnText.style.opacity = '1';
+                    loading.style.display = 'none';
+                }, 1500);
+            }
+        }
+
+        function animateNetwork() {
+            // Light up input nodes
+            const inputNodes = ['input1', 'input2', 'input3', 'input4', 'input5'];
+            inputNodes.forEach((nodeId, index) => {
+                setTimeout(() => {
+                    document.getElementById(nodeId).classList.add('active');
+                }, index * 100);
+            });
+
+            // Light up hidden layer nodes
+            const hiddenNodes = document.querySelectorAll('.layer:nth-child(3) .node');
+            hiddenNodes.forEach((node, index) => {
+                if (index < 5) { // Only animate first 5 for visual effect
+                    setTimeout(() => {
+                        node.classList.add('active');
+                    }, 500 + index * 50);
+                }
+            });
+
+            // Light up second hidden layer
+            const hidden2Nodes = document.querySelectorAll('.layer:nth-child(5) .node');
+            hidden2Nodes.forEach((node, index) => {
+                if (index < 3) {
+                    setTimeout(() => {
+                        node.classList.add('active');
+                    }, 800 + index * 100);
+                }
+            });
+
+            // Light up output
+            setTimeout(() => {
+                document.getElementById('output').classList.add('active');
+            }, 1200);
+
+            // Reset animation after 3 seconds
+            setTimeout(() => {
+                document.querySelectorAll('.node').forEach(node => {
+                    node.classList.remove('active');
+                });
+            }, 3000);
+        }
+
+        // Initialize the app
+        window.addEventListener('load', function() {
+            checkApiStatus();
+
+            // Check API status periodically
+            setInterval(checkApiStatus, 30000); // Every 30 seconds
+        });
+    </script>
+</body>
+</html>

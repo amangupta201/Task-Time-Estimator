@@ -1,0 +1,22 @@
+{
+  "architecture": [
+    5,
+    32,
+    16,
+    1
+  ],
+  "total_parameters": 737,
+  "training_accuracy": {
+    "validation_mae": 28.790452782158074,
+    "validation_mape": 67.51241316448959,
+    "final_train_loss": 0.19467022542980986,
+    "final_val_loss": 0.20641594041247002
+  },
+  "feature_names": [
+    "task_category",
+    "complexity",
+    "description_length",
+    "hour_of_day",
+    "energy_level"
+  ]
+}
