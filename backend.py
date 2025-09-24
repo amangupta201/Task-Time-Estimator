@@ -206,13 +206,8 @@ load_model()
 @app.get("/")
 async def serve_frontend():
     """Serve the frontend HTML file"""
-    return FileResponse('static/index.html')
+    return FileResponse('index.html')
 
-
-# Mount static files (CSS, JS, images, etc.)
-static_path = Path("static")
-if static_path.exists():
-    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/health")
